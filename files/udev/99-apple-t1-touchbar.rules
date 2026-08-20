@@ -1,0 +1,1 @@
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="05ac", ATTR{idProduct}=="8600", RUN+="/bin/sh -c 'echo -n %k > /sys/bus/usb/drivers/usb/unbind; echo -n %k > /sys/bus/usb/drivers_probe'"
