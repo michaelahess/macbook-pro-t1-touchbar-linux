@@ -11,6 +11,32 @@ Confirmed working on a **MacBookPro14,3** (15", 2017, board-id
 `6.14.0-37-generic`. Should apply to any T1 MacBookPro13,x/14,x on any
 Debian-based distro with only path/package-manager adjustments.
 
+**This guide's driver does not build on Linux 7.3 and newer; use the
+ported installer.** Kernel commit
+[`541b293ab186`](https://github.com/torvalds/linux/commit/541b293ab186)
+("ACPI: bus: Eliminate struct acpi_driver") removed `struct acpi_driver`,
+which `apple-ibridge.c` — the iBridge core of the
+[parport0 driver](https://github.com/parport0/mbp-t1-touchbar-driver) this
+guide packages — is still built around. On 7.3+ the DKMS build fails
+outright in `apple-ibridge.c`, and as of 2026-11-25 the parport0 repo
+(last updated for the 6.11 era) carries no port. The fix is a port to a
+`platform_driver` bound to the ACPI-created `APP7777:00` platform device,
+carried in
+[bgausden/mbp-t1-touchbar-linux73](https://github.com/bgausden/mbp-t1-touchbar-linux73)
+— a self-contained installer that pins the same upstream driver, applies
+that port on 7.3+ only, and also carries resume-path fixes that apply on
+older kernels (a dropped `report_fixup`, PM forwarding that never reached
+the second sub-device, and a double restore after suspend).
+`install.sh` checks the running kernel up front and points you there
+instead of failing halfway through the DKMS build. On kernels below
+7.3, the driver source, DKMS steps, and system configuration are
+unchanged.
+
+If you already installed on an older kernel: `files/dkms.conf` sets
+`AUTOINSTALL="yes"`, so after a distro upgrade to 7.3+ DKMS will try to
+rebuild this package automatically and fail at boot. Move to the ported
+installer above before upgrading.
+
 ## The actual bug (why every existing guide leaves the bar dark)
 
 There is a real, existing driver for this
@@ -164,6 +190,9 @@ solve this cleanly, a PR would be very welcome.
   T1 iBridge/Touch Bar Linux driver work.
 - [parport0](https://github.com/parport0) — the build-updated fork this
   guide packages.
+- [Barry Gausden (bgausden)](https://github.com/bgausden) — the Linux 7.3+
+  `platform_driver` port of the driver and the resume-path fixes, packaged
+  in [bgausden/mbp-t1-touchbar-linux73](https://github.com/bgausden/mbp-t1-touchbar-linux73).
 - Everyone in
   [Dunedan/mbp-2016-linux#189](https://github.com/Dunedan/mbp-2016-linux/issues/189)
   and [t2linux/kernel#12](https://github.com/t2linux/kernel/issues/12) who

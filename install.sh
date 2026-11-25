@@ -3,6 +3,11 @@
 # package and applies the fixes needed for the display/touch interface to
 # actually bind, on Ubuntu/Mint (Debian-based) systems. See README.md for the
 # explanation of why each step exists.
+#
+# MAINTAINERS: the version guard below refuses Linux 7.3+ because the upstream
+# driver still uses the removed struct acpi_driver API. If parport0 gains a
+# 7.3+ port, drop the guard (and the README note) rather than pointing users
+# elsewhere.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +16,20 @@ PKG_NAME=apple-t1-touchbar
 PKG_VER=0.1
 SRC_DIR="/usr/src/${PKG_NAME}-${PKG_VER}"
 
-echo "== 0. Checking T1 firmware state =="
+echo "== 0. Checking kernel version and T1 firmware state =="
+IFS=. read -r KERNEL_MAJOR KERNEL_MINOR _ <<<"$(uname -r)"
+KERNEL_MAJOR="${KERNEL_MAJOR:-0}"
+KERNEL_MINOR="${KERNEL_MINOR:-0}"
+if [ "$KERNEL_MAJOR" -ge 8 ] || { [ "$KERNEL_MAJOR" -eq 7 ] && [ "$KERNEL_MINOR" -ge 3 ]; }; then
+	echo "This guide's driver does not build on Linux ${KERNEL_MAJOR}.${KERNEL_MINOR}: kernel" >&2
+	echo "commit 541b293ab186 (\"ACPI: bus: Eliminate struct acpi_driver\") removed" >&2
+	echo "'struct acpi_driver', which apple-ibridge.c is still built around, so the DKMS" >&2
+	echo "build below would fail. As of 2026-11-25 it has not been fixed in the parport0" >&2
+	echo "repo (last updated for 6.11). Use the installer that carries the" >&2
+	echo "platform_driver port instead:" >&2
+	echo "  https://github.com/bgausden/mbp-t1-touchbar-linux73" >&2
+	exit 1
+fi
 if lsusb | grep -q '05ac:1281'; then
 	echo "T1 chip is stuck in 'Recovery Mode' (05ac:1281). This must be fixed" >&2
 	echo "before the driver can do anything -- boot a full macOS install once" >&2
